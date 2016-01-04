@@ -30,7 +30,7 @@
           [:span.icon-bar]
           [:span.icon-bar]
           [:span.icon-bar]]
-         [:a.navbar-brand {:href "#/"} "capstone-cljs-front-end"]]
+         [:a.navbar-brand {:href "#/"} "API Velocity Measurement"]]
         [:div.navbar-collapse.collapse
          (when-not @collapsed? {:class "in"})
          [:ul.nav.navbar-nav
@@ -41,22 +41,16 @@
   [:div.container
    [:div.row
     [:div.col-md-12
-     "this is the story of capstone-cljs-front-end... work in progress"]]])
+     "This app is for defining load-testing targets and showing load-testing results"]]])
 
 (defn home-page []
   [:div.container
    [:div.jumbotron
-    [:h1 "Welcome to capstone-cljs-front-end"]
-    [:p "Time to start building your site!"]
-    [:p [:a.btn.btn-primary.btn-lg {:href "http://luminusweb.net"} "Learn more »"]]]
+    [:h1 "Welcome to APi Velocity Measurer"]
+    [:p "Time to start building your site!"]]]
    [:div.row
     [:div.col-md-12
-     [:h2 "Welcome to ClojureScript"]]]
-   (when-let [docs (session/get :docs)]
-     [:div.row
-      [:div.col-md-12
-       [:div {:dangerouslySetInnerHTML
-              {:__html (md->html docs)}}]]])])
+     [:h2 "Welcome to ClojureScript"]]]])
 
 (def pages
   {:home #'home-page
