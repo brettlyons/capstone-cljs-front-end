@@ -46,50 +46,37 @@
 (def api-address (reagent/atom nil))
 (def api-name (reagent/atom nil))
 (def api-payload (reagent/atom nil))
-(def test-info (reagent/atom [{:address "BLAH 1"
+(def test-info (reagent/atom {:1
+                              {:address nil
                                :name nil
-                               :payload nil
-                               :action "GET"}]))
+                               :payload nil}}))
 
 ;; (defn increment-count [c]
 ;;     (swap! app-state update-in [:counters (:id c) :count] inc))
 
-(defn toggle-action
-  [action]
-  (if (= action "GET")
-    (str "POST")
-    (str "GET")))
-
 (defn api-and-name [test-info n]
   (fn [] 
     [:div.row
-     [:h2 (str "TEST INFO: " @test-info " n: " n " Get-In test: " (get-in @test-info [n :address]))]
      [:div.col-md-8
-      ;; [:button.btn.btn-default {:on-click #(swap! test-info assoc-in [n :action] (toggle-action (get-in @test-info [n :action]))) } (str "Current Method: "(get-in @test-info [n :action])) ]
-      ;; set up boot-switch here for checkboxs
-      [:br]
       [:label "Full URL"]
       [:div.input-group
        [:span.input-group-addon "Url: "]
        [:input.form-control {:type "URL"
-                             :value (get-in @test-info [n :address])
-                             :on-change #(swap! test-info assoc-in  [n :address] (.-target.value %))}]]
-
-
+                             :value (:address :n test-info)
+                             :on-change #(update-in [:n :address test-info] (-> % .-target .-value))}]]
       [:label "Name of the API to appear on the graph"]
       [:div.input-group
        [:span.input-group-addon "Name: "]
        [:input.form-control {:type "text"
-                             :value (get-in @test-info [n :name])
-                             :on-change #(swap! test-info assoc-in  [n :name] (.-target.value %))}]]]
+                             :value (:name :n test-info)
+                             :on-change #(update-in [:n :name test-info] (-> % .-target .-value))}]]]
      [:div.col-md-4
       [:label "JSON payload to send"]
       [:div.input-group
        [:textarea.form-control {:type "textarea"
                                 :rows 4
-                                :value (get-in @test-info [n :payload])
-                                :on-change #(swap! test-info assoc-in  [n :payload] (.-target.value %))}]]]]))
-
+                                :value (:payload :n test-info)
+                                :on-change #(update-in [:n :payload test-info] (-> % .-target .-value))}]]]]))
 
 (defn add-api-info [counter]
   (println "Add-info hit, counter" counter)
@@ -108,7 +95,7 @@
 
 
 (defn home-page []
-  (let [counter (reagent/atom 0)]
+  (let [counter (reagent/atom 1)]
     [:div.container
      [:div.jumbotron
       [:h1 "Welcome to API Velociraptor"]]]
@@ -117,7 +104,7 @@
       [:div.col-md-12
        [:h2 "Welcome to API Velociraptor"]]]
      [:div.row
-      [api-and-name test-info @counter]]
+      [api-and-name test-info counter]]
      [:div.row
       [add-test counter]]]))
 

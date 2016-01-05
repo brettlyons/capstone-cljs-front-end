@@ -12,6 +12,7 @@
                  [bouncer "1.0.0"]
                  [org.clojure/tools.nrepl "0.2.12"]
                  [org.webjars/bootstrap "3.3.6"]
+                 [org.webjars/bootswatch-darkly "3.3.5+4"]
                  [org.webjars/jquery "2.1.4"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.slf4j/slf4j-log4j12 "1.7.13"]
