@@ -43,31 +43,39 @@
     [:div.col-md-12
      "This app is for defining load-testing targets and showing load-testing results"]]])
 
-(def api-address (reagent/atom nil))
-(def api-name (reagent/atom nil))
-(def api-payload (reagent/atom nil))
-(def test-info (reagent/atom [{:address "BLAH 1"
+(defonce counter (reagent/atom 0))
+
+(defonce test-info (reagent/atom (sorted-map)))
+
+(defn add-api-info []
+  (let [id (swap! counter inc)]
+    (swap! test-info assoc id {:id id
+                               :address nil 
                                :name nil
                                :payload nil
-                               :action "GET"}]))
+                               :action nil})))
+;; (defn add-todo [text]
+;;   (let [id (swap! counter inc)]
+;;     (swap! todos assoc id {:id id :title text :done false})))
 
-;; (defn increment-count [c]
-;;     (swap! app-state update-in [:counters (:id c) :count] inc))
 
-(defn toggle-action
-  [action]
-  (if (= action "GET")
-    (str "POST")
-    (str "GET")))
+(defn minus-api-info [id]
+  (swap! test-info dissoc id))
 
-(defn api-and-name [test-info n]
+(defonce init (do
+                (add-api-info)))
+
+(defn api-form [test-info n]
   (fn [] 
     [:div.row
-     [:h2 (str "TEST INFO: " @test-info " n: " n " Get-In test: " (get-in @test-info [n :address]))]
      [:div.col-md-8
-      ;; [:button.btn.btn-default {:on-click #(swap! test-info assoc-in [n :action] (toggle-action (get-in @test-info [n :action]))) } (str "Current Method: "(get-in @test-info [n :action])) ]
-      ;; set up boot-switch here for checkboxs
-      [:br]
+      [:input {:type "radio" :name "action" :value "POST"
+               :on-click #(swap! test-info assoc-in  [n :action] (.-target.value %))} "POST "]
+      [:input {:type "radio" :name "action" :value "GET" 
+               :on-click #(swap! test-info assoc-in  [n :action] (.-target.value %))} "GET "]
+      [:button.btn.btn-default.btn-sm.pull-right {:on-click #(minus-api-info n)}
+       [:span.glyphicon.glyphicon-minus]]
+      [:p]
       [:label "Full URL"]
       [:div.input-group
        [:span.input-group-addon "Url: "]
@@ -83,44 +91,43 @@
                              :value (get-in @test-info [n :name])
                              :on-change #(swap! test-info assoc-in  [n :name] (.-target.value %))}]]]
      [:div.col-md-4
-      [:label "JSON payload to send"]
-      [:div.input-group
-       [:textarea.form-control {:type "textarea"
-                                :rows 4
-                                :value (get-in @test-info [n :payload])
-                                :on-change #(swap! test-info assoc-in  [n :payload] (.-target.value %))}]]]]))
+      [:p]
+      [:div {:style {:visibility ((fn []
+                                    (if (= (get-in @test-info [n :action]) "POST")
+                                      (str "visible")
+                                      (str "hidden")))) }}
+       [:label "Payload for POST"]
+       [:div.input-group 
+        [:textarea.form-control {:type "textarea"
+                                 :rows 5
+                                 :value (get-in @test-info [n :payload])
+                                 :on-change #(swap! test-info assoc-in  [n :payload] (.-target.value %))}]]]]]))
 
 
-(defn add-api-info [counter]
-  (println "Add-info hit, counter" counter)
-  (swap! counter inc))
-
-(defn minus-api-info [counter]
-  (println "minus-info hit, counter" counter)
-  (swap! counter dec))
-
-(defn add-test [counter]
-  [:div.row
-   [:button.btn.btn-default.btn-sm {:on-click #(add-api-info counter)}
-    [:span.glyphicon.glyphicon-plus]]
-   [:button.btn.btn-default.btn-sm {:on-click #(minus-api-info counter)}
-    [:span.glyphicon.glyphicon-minus]]])
+(defn add-test []
+   [:div.col-md-8
+    [:button.btn.btn-default.btn-sm.pull-right {:on-click add-api-info}
+     [:span.glyphicon.glyphicon-plus]]])
 
 
 (defn home-page []
-  (let [counter (reagent/atom 0)]
     [:div.container
      [:div.jumbotron
       [:h1 "Welcome to API Velociraptor"]]]
-    [:div.container
-     [:div.row
-      [:div.col-md-12
-       [:h2 "Welcome to API Velociraptor"]]]
-     [:div.row
-      [api-and-name test-info @counter]]
-     [:div.row
-      [add-test counter]]]))
+  [:div.container
+   [:div.row
+    [:h2 (str "TEST INFO: " @test-info " counter: " @counter)]]
+   [:div.row
+    [:div.col-md-12
+     [:h2 "Welcome to API Velociraptor"]]
+    (for [single-api-test @test-info]
+      [:div.row
+       ^{:key (:id single-api-test)}
+       [api-form test-info @counter]])
+    [:div.row
+     [add-test]]]])
 
+;;[api-and-name test-info (- (count @test-info) 1)
 (def pages
   {:home #'home-page
    :about #'about-page})
