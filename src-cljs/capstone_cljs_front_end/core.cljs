@@ -2,6 +2,8 @@
   (:require [reagent.core :as reagent :refer [atom]]
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
+            [cljsjs.chartist]
+            ;; [cljsjs.d3]
             [goog.events :as events]
             [goog.history.EventType :as HistoryEventType]
             [markdown.core :refer [md->html]]
@@ -35,6 +37,7 @@
          (when-not @collapsed? {:class "in"})
          [:ul.nav.navbar-nav
           [nav-link "#/" "Home" :home collapsed?]
+          [nav-link "#/results" "Current Results" :results collapsed?]
           [nav-link "#/about" "About" :about collapsed?]]]]])))
 
 (defn about-page []
@@ -55,11 +58,24 @@
                                :action nil})))
 
 (defn minus-api-info [id]
-  (swap! test-info dissoc id)
-  (reset! counter (apply max (keys @test-info)))) 
+  (swap! test-info dissoc id)) 
 
 (defonce init (do
                 (add-api-info)))
+
+;; (defn chartist-bar []
+;;   (let [data (clj->js {:labels (array 'mon' 'wed' 'tues' 'thurs' 'fri') :series (array (array 1 2 3 4 5))}) options (clj->js {:distrobuteSeries true})]
+;;     (println (.Line js/Chartist "#chart1" data "#chart1"))
+;;     (.Line js/Chartist "#chart1" data "#chart1")
+;;   (fn []
+;;     [:h2 (str (.Line js/Chartist "#chart1" data "#chart1"))]
+;;     [:div.ct-chart.ct-golden-section {:id "chart1"}])))
+
+(defn bar-for-chart [percentage label]
+  [:div.row
+    [:p label]
+    [:div.progress
+     [:div.progress-bar {:style {:width (str percentage "%")}}]]])
 
 (defn add-test-btn []
    [:div.col-md-8
@@ -124,9 +140,19 @@
     [:div.row
      [add-test-btn]]]])
 
-;;[api-and-name test-info (- (count @test-info) 1)
+(defn results []
+  [:div.container
+   [chartist-bar]
+   [:div.row
+    [:div.well
+     [bar-for-chart 10 "This Awesome API bar"]
+     [bar-for-chart 20 "This also an bar"]
+     [bar-for-chart 50 "This is now a bar"]]
+    [:h2 "THE RESULTS PAGE"]]])
+
 (def pages
   {:home #'home-page
+   :results #'results
    :about #'about-page})
 
 (defn page []
@@ -138,6 +164,9 @@
 
 (secretary/defroute "/" []
   (session/put! :page :home))
+
+(secretary/defroute "/results" []
+  (session/put! :page :results))
 
 (secretary/defroute "/about" []
   (session/put! :page :about))

@@ -31,6 +31,8 @@
                  [reagent "0.5.1"]
                  [reagent-forms "0.5.13"]
                  [reagent-utils "0.1.7"]
+                 [cljsjs/chartist "0.9.4-1"]
+                 ;; [cljsjs/d3 "3.5.7-1"] ;; latest release
                  [secretary "1.2.3"]
                  [org.clojure/core.async "0.2.374"]
                  [cljs-ajax "0.5.2"]
