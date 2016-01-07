@@ -44,8 +44,7 @@
      "This app is for defining load-testing targets and showing load-testing results"]]])
 
 (defonce counter (reagent/atom 0))
-
-(defonce test-info (reagent/atom (sorted-map)))
+(defonce test-info (reagent/atom {}))
 
 (defn add-api-info []
   (let [id (swap! counter inc)]
@@ -54,60 +53,60 @@
                                :name nil
                                :payload nil
                                :action nil})))
-;; (defn add-todo [text]
-;;   (let [id (swap! counter inc)]
-;;     (swap! todos assoc id {:id id :title text :done false})))
-
 
 (defn minus-api-info [id]
-  (swap! test-info dissoc id))
+  (swap! test-info dissoc id)
+  (reset! counter (apply max (keys @test-info)))) 
 
 (defonce init (do
                 (add-api-info)))
 
-(defn api-form [test-info n]
+(defn add-test-btn []
+   [:div.col-md-8
+    [:button.btn.btn-default.btn-sm.pull-right {:on-click add-api-info}
+     [:span.glyphicon.glyphicon-plus]]])
+
+(defn rm-test-btn [id]
+      [:button.btn.btn-default.btn-sm.pull-right {:on-click #(minus-api-info id)}
+       [:span.glyphicon.glyphicon-minus]])
+
+(defn api-form [id]
+  ;; (println "ID: " id)
   (fn [] 
     [:div.row
      [:div.col-md-8
-      [:input {:type "radio" :name "action" :value "POST"
-               :on-click #(swap! test-info assoc-in  [n :action] (.-target.value %))} "POST "]
-      [:input {:type "radio" :name "action" :value "GET" 
-               :on-click #(swap! test-info assoc-in  [n :action] (.-target.value %))} "GET "]
-      [:button.btn.btn-default.btn-sm.pull-right {:on-click #(minus-api-info n)}
-       [:span.glyphicon.glyphicon-minus]]
+      [:input {:type "radio" :name (str "action-" id) :value "POST"
+               :on-click #(swap! test-info assoc-in [id :action] (.-target.value %))} "POST "]
+      [:input {:type "radio" :name (str "action-" id) :value "GET" 
+               :on-click #(swap! test-info assoc-in [id :action] (.-target.value %))} "GET "]
+      [rm-test-btn id]
       [:p]
       [:label "Full URL"]
       [:div.input-group
        [:span.input-group-addon "Url: "]
        [:input.form-control {:type "URL"
-                             :value (get-in @test-info [n :address])
-                             :on-change #(swap! test-info assoc-in  [n :address] (.-target.value %))}]]
+                             :value (get-in @test-info [id :address])
+                             :on-change #(swap! test-info assoc-in [id :address] (.-target.value %))}]]
 
 
       [:label "Name of the API to appear on the graph"]
       [:div.input-group
        [:span.input-group-addon "Name: "]
        [:input.form-control {:type "text"
-                             :value (get-in @test-info [n :name])
-                             :on-change #(swap! test-info assoc-in  [n :name] (.-target.value %))}]]]
+                             :value (get-in @test-info [id :name])
+                             :on-change #(swap! test-info assoc-in [id :name] (.-target.value %))}]]]
      [:div.col-md-4
       [:p]
       [:div {:style {:visibility ((fn []
-                                    (if (= (get-in @test-info [n :action]) "POST")
-                                      (str "visible")
-                                      (str "hidden")))) }}
+                                    (if (= (get-in @test-info [id :action]) "POST")
+                                      "visible"
+                                      "hidden"))) }}
        [:label "Payload for POST"]
        [:div.input-group 
         [:textarea.form-control {:type "textarea"
                                  :rows 5
-                                 :value (get-in @test-info [n :payload])
-                                 :on-change #(swap! test-info assoc-in  [n :payload] (.-target.value %))}]]]]]))
-
-
-(defn add-test []
-   [:div.col-md-8
-    [:button.btn.btn-default.btn-sm.pull-right {:on-click add-api-info}
-     [:span.glyphicon.glyphicon-plus]]])
+                                 :value (get-in @test-info [id :payload])
+                                 :on-change #(swap! test-info assoc-in  [id :payload] (.-target.value %))}]]]]]))
 
 
 (defn home-page []
@@ -120,12 +119,10 @@
    [:div.row
     [:div.col-md-12
      [:h2 "Welcome to API Velociraptor"]]
-    (for [single-api-test @test-info]
-      [:div.row
-       ^{:key (:id single-api-test)}
-       [api-form test-info @counter]])
+    (doall (for [test @test-info]
+       ^{:key (first test)} [api-form (first test)]))
     [:div.row
-     [add-test]]]])
+     [add-test-btn]]]])
 
 ;;[api-and-name test-info (- (count @test-info) 1)
 (def pages
