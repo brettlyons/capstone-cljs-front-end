@@ -49,7 +49,7 @@
 (defonce counter (reagent/atom 0))
 (defonce test-info (reagent/atom {}))
 
-(defn minus-api-info [id]
+(defn del-api-test [id]
   (swap! test-info update-in [:testing] dissoc id)) 
 
 (defn get-test [id]
@@ -59,12 +59,12 @@
   (get-in @test-info [:testing id :name]))
 
 (defn set-editing! [& test-id]
-  ;; (println "test-id passed into set-editing! : " (first test-id) "get-test: " (get-test (first test-id)))
-  (if (nil? test-id)
+  ;; (println (str "getting2: " (:action (last (last (get-in @test-info [:testing]))))))
+  (if (nil? (first test-id))
     (swap! test-info assoc :editing {:address nil 
                                      :name nil
                                      :payload nil
-                                     :action nil})
+                                     :action (or (:action (last (last (get-in @test-info [:testing])))) "GET")})
     (swap! test-info assoc :editing (get-test (first test-id)))))
 
 (defn add-api-test! []
@@ -100,35 +100,44 @@
 (defn add-test-btn []
   ;; functionality needs to be added here to append new-test into the app-db and set :editing @test-info to new (empty) api obj  
   [:div.col-md-8
-   [:button.btn.btn-default.btn-lg.pull-right {:on-click add-api-test!}
-    [:span.glyphicon.glyphicon-plus] (str " Api To Test List")]])
+   [:button.btn.btn-primary.btn-lg {:on-click #((add-api-test!)
+                                                (.. js/document (querySelector "input[name='url-form']") (focus)))}
+    [:span.glyphicon.glyphicon-plus] (str " Api To Test List")]
+   [:button.btn.btn-warning.btn-lg.pull-right {:on-click #(set-editing! nil)} "Clear Edits"]])
 
 (defn rm-test-btn [id]
-  [:button.destroy.pull-right {:on-click #(minus-api-info id)}])
+  [:span.glyphicon.destroy.glyphicon-trash.pull-right {;:style {:color "white"}
+                                                       :title "Delete?"
+                                                       :on-click #(del-api-test id)}])
 
 (defn api-form []
   ;; (println "ID: " id)
   (let [id (:id (:editing @test-info))]
     (fn []
       [:div.row
-      [:p]
        [:div.col-md-8
         [:div.btn-group {:role "group" :id (str "action-" (:editing @test-info))}
-         [:button.btn.btn-default {:type "button"
+         [:button.btn.btn-primary {:type "button"
                                    :name "get-btn"
                                    :value "GET"
-                                   :on-click #(swap! test-info assoc-in [:editing :action] (.-target.value %))} "GET"]
-
-         [:button.btn.btn-default {:type "button"
+                                   :disabled (= (get-in @test-info [:editing :action]) "GET") 
+                                   :on-click #((swap! test-info assoc-in [:editing :action] (.-target.value %))
+                                               ())} "GET"]
+                                               ;; (println (get-in @test-info [:editing :action])))} "GET"]
+         [:button.btn.btn-primary {:type "button"
+                                   :name "get-btn"
                                    :value "POST"
-                                   :on-click #(swap! test-info assoc-in [:editing :action] (.-target.value %))} "POST"]]
+                                   :disabled (= (get-in @test-info [:editing :action]) "POST") 
+                                   :on-click #((swap! test-info assoc-in [:editing :action] (.-target.value %))
+                                               ())} "POST"]]
+                                               ;; (println (get-in @test-info [:editing :action])))} "POST"]]
         
-        ;;[rm-test-btn id]
         [:p]
         [:label "Full URL"]
         [:div.input-group
          [:span.input-group-addon "Url: "]
          [:input.form-control {:type "URL"
+                               :name "url-form"
                                :value (get-in @test-info [:editing :address])
                                :on-change #(swap! test-info assoc-in [:editing :address] (.-target.value %))}]]
 
@@ -148,33 +157,28 @@
          [:label "Payload for POST"]
          [:div.input-group 
           [:textarea.form-control {:type "textarea"
-                                   :rows 5
+                                   :disabled (= (get-in @test-info [:editing :action]) "GET")
+                                   :rows 6
                                    :value (get-in @test-info [:editing :payload])
                                    :on-change #(swap! test-info assoc-in  [:editing :payload] (.-target.value %))}]]]]])))
 
-;; (defn set-editing! [id]
-;;   (println "EDITING TEST INFO: " (:editing @test-info))
-;;   (swap! test-info assoc :editing id))
-
 (defn name-capsule [id]
   [:div.row 
-   [:col-md-10.test-capsule {:on-click #(set-editing! id)} (str (get-testing-name id))]
-   [:col-md-2 [rm-test-btn id]]])
+   [:div.col-md-12.capsule {;:on-mouse-over #(println "HOVERING")
+                            :title "Click To Edit"
+                            :on-click #(set-editing! id)} (str (get-testing-name id)) [rm-test-btn id]]])
 
 (defn home-page []
   [:div.container
    [:div.row
-    [:div.col-md-12
-    [:div.jumbotron
-     [:h1 "Welcome to API Velociraptor"]]]]
+    [:h2 {:style {:background-color "tomato"}} (str "TEST INFO: " @test-info " counter: " @counter)]]
    [:div.row
-    [:h2 {:style {:background-color "tomato"}} (str "TEST INFO: " @test-info " counter: " @counter " editing: " (:editing @test-info))]]
-   [:div.row
-    [:div.col-md-2 
+    [:div.col-md-2
+     [:br]
      (doall (for [test1 (:testing @test-info)]
               ^{:key (first test1)} [name-capsule (first test1)]))]
     [:div.col-md-10
-     [:h2 "API Info"]
+     [:h3 "API To Test"]
       [api-form]
     [:div.row
      [:p]
