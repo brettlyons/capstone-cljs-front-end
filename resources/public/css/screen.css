@@ -4,6 +4,44 @@ body {
     height: 100%;
     padding-top: 40px;
 }
+
+test-capsule {
+    color: aquamarine;
+    font-size: 20px;
+}
+
+button .destroy {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 100%;
+    vertical-align: baseline;
+    font-family: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    -ms-appearance: none;
+    -o-appearance: none;
+    appearance: none;
+    
+}
+
+.destroy:hover {
+    text-shadow: 0 0 1px #000,
+    0 0 10px rgba(199, 107, 107, 0.8);
+    -webkit-transform: scale(1.3);
+    -ms-transform: scale(1.3);
+    transform: scale(1.3);
+}
+
+.destroy:after {
+    content: '✖';
+}
+
+/* .destroy:hover { */
+/*     display: block; */
+    
+/* } */
 {% if cljs %}
 @-moz-keyframes three-quarters-loader {
     0% {
