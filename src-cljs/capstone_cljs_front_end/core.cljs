@@ -7,7 +7,7 @@
             [goog.events :as events]
             [goog.history.EventType :as HistoryEventType]
             [markdown.core :refer [md->html]]
-            [ajax.core :refer [GET POST]])
+            [ajax.core :as ajax :refer [GET POST]])
   (:import goog.History))
 
 (defn nav-link [uri title page collapsed?]
@@ -58,132 +58,165 @@
 (defn get-testing-name [id]
   (get-in @test-info [:testing id :name]))
 
+(defn get-testing-addr [id]
+  (get-in @test-info [:testing id :address]))
+
+(defn get-testing-method [id]
+  (get-in @test-info [:testing id :method]))
+
+(defn get-testing-payload [id]
+  (get-in @test-info [:testing id :payload]))
+
+(defn get-testing-results [id]
+  (get-in @test-info [:testing id :results]))
+
+(defn push-to-results [id result]
+  (swap! test-info update-in [:testing id :results] conj result)
+  (println (get-testing-results id)))
+
 (defn set-editing! [& test-id]
-  ;; (println (str "getting2: " (:action (last (last (get-in @test-info [:testing]))))))
-  (if (nil? (first test-id))
-    (swap! test-info assoc :editing {:address nil 
-                                     :name nil
-                                     :payload nil
-                                     :action (or (:action (last (last (get-in @test-info [:testing])))) "GET")})
-    (swap! test-info assoc :editing (get-test (first test-id)))))
+  (swap! test-info assoc :editing
+         (get (:testing @test-info) (first test-id) {:address "http://" :name nil :payload nil :method  "GET" :results []}))
+  (del-api-test (first test-id)))
 
 (defn add-api-test! []
   (let [id (swap! counter inc)]
     (swap! test-info assoc-in [:testing id] (:editing @test-info))
     (set-editing!)))
 
-
 (defonce init (do
                 (set-editing!)))
 
-;; (defn chartist-bar []
-;;   (let [data (clj->js {:labels (array 'mon' 'wed' 'tues' 'thurs' 'fri') :series (array (array 1 2 3 4 5))}) options (clj->js {:distrobuteSeries true})]
-;;     (println (.Line js/Chartist ".ct-chart" data))
-;;     ;;(.Linex js/Chartist ".chart1" data)
-;;   (fn []
-;;     [:h2 (str (.Line js/Chartist ".ct-chart" data))]
-;;     [:div.ct-chart.ct-golden-section {:id "chart1"}])))
+(defn make-ajax-call [id]
+  (let [address (get-testing-addr id) method (get-testing-method id) payload (get-testing-payload id) start (.now js/Date)]
+    (if (= method "GET")
+      (ajax/GET address {:timeout 60
+                    :handler (fn [res]
+                               (println (str "response " res " and the Time to respond was: " (- (.now js/Date) start))
+                                        (push-to-results id (- (.now js/Date) start))
+                                        (get-testing-results id)))
+                :error-handler (fn [err]
+                                 (println (str "response " err " and the Time to respond was: " (- (.now js/Date) start)))
+                                 (println (str "get err handler " err)))})
+      (ajax/POST address {;; :params (clj->js ){:thingie "stuffjkdlajklajkla"}
+                          :body payload
+                          :handler (fn [res] (println "post handler" res (str "js->clj THE MAP: " payload)))
+                          :error-handler (fn [err] (println "post err handler " err payload))}))))
 
-(defn bar-for-chart [perf label]
-  [:div.row
-   [:p label]
-   [:div.progress
-    [:div.progress-bar.progress-bar-striped.active {:style
-                                                    {
-                                                     ;; :height (str "10%")
-                                                     :width (str (:percentage perf) "%")
-                                                     ;; :background-color "grey"
-                                                    }}] (str "Avg. Requests / second " (:velocity perf))]])
-
-
-
-(defn add-test-btn []
-  ;; functionality needs to be added here to append new-test into the app-db and set :editing @test-info to new (empty) api obj  
+(defn edit-btns []
   [:div.col-md-8
-   [:button.btn.btn-primary.btn-lg {:on-click #((add-api-test!)
+   [:button.btn.btn-primary.btn-lg {:on-click #(;(if ())
+                                                (add-api-test!)
                                                 (.. js/document (querySelector "input[name='url-form']") (focus)))}
-    [:span.glyphicon.glyphicon-plus] (str " Api To Test List")]
-   [:button.btn.btn-warning.btn-lg.pull-right {:on-click #(set-editing! nil)} "Clear Edits"]])
-
-(defn rm-test-btn [id]
-  [:span.glyphicon.destroy.glyphicon-trash.pull-right {;:style {:color "white"}
-                                                       :title "Delete?"
-                                                       :on-click #(del-api-test id)}])
+    [:span.glyphicon.glyphicon-plus] (str " API To List")]
+   [:button.btn.btn-info.btn-lg.pull-right {:on-click #(set-editing! nil)} "Clear Edits"]])
 
 (defn api-form []
-  ;; (println "ID: " id)
-  (let [id (:id (:editing @test-info))]
-    (fn []
-      [:div.row
-       [:div.col-md-8
-        [:div.btn-group {:role "group" :id (str "action-" (:editing @test-info))}
-         [:button.btn.btn-primary {:type "button"
-                                   :name "get-btn"
-                                   :value "GET"
-                                   :disabled (= (get-in @test-info [:editing :action]) "GET") 
-                                   :on-click #((swap! test-info assoc-in [:editing :action] (.-target.value %))
-                                               ())} "GET"]
-                                               ;; (println (get-in @test-info [:editing :action])))} "GET"]
-         [:button.btn.btn-primary {:type "button"
-                                   :name "get-btn"
-                                   :value "POST"
-                                   :disabled (= (get-in @test-info [:editing :action]) "POST") 
-                                   :on-click #((swap! test-info assoc-in [:editing :action] (.-target.value %))
-                                               ())} "POST"]]
-                                               ;; (println (get-in @test-info [:editing :action])))} "POST"]]
-        
-        [:p]
-        [:label "Full URL"]
-        [:div.input-group
-         [:span.input-group-addon "Url: "]
-         [:input.form-control {:type "URL"
-                               :name "url-form"
-                               :value (get-in @test-info [:editing :address])
-                               :on-change #(swap! test-info assoc-in [:editing :address] (.-target.value %))}]]
+  (fn []
+    [:div.row
+     [:div.col-md-8
+      [:div.btn-group {:role "group" :id (str "method-" (:editing @test-info))}
+       [:button.btn.btn-primary {:type "button"
+                                 :name "get-btn"
+                                 :value "GET"
+                                 :disabled (= (get-in @test-info [:editing :method]) "GET") 
+                                 :on-click #((swap! test-info assoc-in [:editing :method] (.-target.value %))
+                                             ())} "GET"] ;; empty parens if other lists/fns are needed
+       ;; (println (get-in @test-info [:editing :method])))} "GET"]
+       [:button.btn.btn-primary {:type "button"
+                                 :name "get-btn"
+                                 :value "POST"
+                                 :disabled (= (get-in @test-info [:editing :method]) "POST") 
+                                 :on-click #((swap! test-info assoc-in [:editing :method] (.-target.value %))
+                                             ())} "POST"]] ;; empty parens if other lists/fns are needed 
+      ;; (println (get-in @test-info [:editing :method])))} "POST"]]
+      
+      [:p]
+      [:label "Full URL"]
+      [:div.input-group
+       [:span.input-group-addon "Url: "]
+       [:input.form-control {:type "URL"
+                             :name "url-form"
+                             :value (get-in @test-info [:editing :address])
+                             :on-change #(swap! test-info assoc-in [:editing :address] (.-target.value %))}]]
 
 
-        [:label "Name of the API to appear on the graph"]
-        [:div.input-group
-         [:span.input-group-addon "Name: "]
-         [:input.form-control {:type "text"
-                               :value (get-in @test-info [:editing :name])
-                               :on-change #(swap! test-info assoc-in [:editing :name] (.-target.value %))}]]]
-       [:div.col-md-4
-        [:p]
-        [:div {:style {:visibility ((fn []
-                                      (if (= (get-in @test-info [:editing :action]) "POST")
-                                        "visible"
-                                        "hidden"))) }}
-         [:label "Payload for POST"]
-         [:div.input-group 
-          [:textarea.form-control {:type "textarea"
-                                   :disabled (= (get-in @test-info [:editing :action]) "GET")
-                                   :rows 6
-                                   :value (get-in @test-info [:editing :payload])
-                                   :on-change #(swap! test-info assoc-in  [:editing :payload] (.-target.value %))}]]]]])))
+      [:label "Name of the API to appear on the graph"]
+      [:div.input-group
+       [:span.input-group-addon "Name: "]
+       [:input.form-control {:type "text"
+                             :value (get-in @test-info [:editing :name])
+                             :on-change #(swap! test-info assoc-in [:editing :name] (.-target.value %))}]]]
+     [:div.col-md-4
+      [:p]
+      [:div {:style {:visibility ((fn []
+                                    (if (= (get-in @test-info [:editing :method]) "POST")
+                                      "visible"
+                                      "hidden"))) }}
+       [:label "Payload for POST"]
+       [:div.input-group 
+        [:textarea.form-control {:type "textarea"
+                                 :disabled (= (get-in @test-info [:editing :method]) "GET")
+                                 :rows 5
+                                 :value (get-in @test-info [:editing :payload])
+                                 :on-change #(swap! test-info assoc-in  [:editing :payload] (.-target.value %))}]]]]]))
+
+(defn rm-test-btn [id]
+  [:span.glyphicon.destroy.glyphicon-trash {;:style {:color "white"}
+                                            :title "Delete?"
+                                            :on-click #(del-api-test id)}])
+(defn edit-test-btn [id]
+  [:span.glyphicon.destroy.glyphicon-pencil.pull-right {;:style {:color "white"}
+                                                        :title "Edit?"
+                                                        :on-click #(set-editing! id)}])
 
 (defn name-capsule [id]
   [:div.row 
-   [:div.col-md-12.capsule {;:on-mouse-over #(println "HOVERING")
-                            :title "Click To Edit"
-                            :on-click #(set-editing! id)} (str (get-testing-name id)) [rm-test-btn id]]])
+   [:p]
+   [:div.col-md-12.capsule.capsule-small {:style {:cursor "pointer"} 
+                                          :title "Click To Edit"
+                                          :on-click #(set-editing! id)} (str (get-testing-name id))
+    [:div.row
+     [edit-test-btn id]
+     [rm-test-btn id]]]])
 
 (defn home-page []
   [:div.container
    [:div.row
-    [:h2 {:style {:background-color "tomato"}} (str "TEST INFO: " @test-info " counter: " @counter)]]
+    [:h2 {:style {:background-color "tomato"}} (str "DEVINFO: " @test-info " counter: " @counter)]]
    [:div.row
     [:div.col-md-2
-     [:br]
+     [:h3.capsule.capsule-bar  "API's"]
      (doall (for [test1 (:testing @test-info)]
               ^{:key (first test1)} [name-capsule (first test1)]))]
     [:div.col-md-10
-     [:h3 "API To Test"]
-      [api-form]
-    [:div.row
-     [:p]
-     [add-test-btn]]]]])
+     [:h3.capsule.capsule-bar "Edit API Info"]
+     [api-form]
+     [:div.row
+      [:p]
+      [edit-btns]]]]
+   [:p]
+   [:div.row
+    [:div.col-md-12.capsule.capsule-bar]]
+   [:p]
+   [:div.row
+    [:div.col-md-12
+     [:button.btn.btn-lg.btn-danger.pull-right {:on-click (fn [e]
+                                                            (doall (for [test (:testing @test-info)]
+                                                                     (let [testId (first test)]
+                                                                       (make-ajax-call testId)))))} "Run the Test" ]]]])
 
+(defn bar-for-chart [id]
+  (let [perf (get-testing-results id) label (get-testing-name id)]
+    [:div.row
+     [:p label]
+     [:div.progress
+      [:div.progress-bar.progress-bar-striped.active {:style
+                                                      {
+                                                       ;; :height (str "10%")
+                                                       :width (str (:percentage perf) "%")
+                                                       ;; :background-color "grey"
+                                                       }}] (str "Avg. Time For Response in ms: " (/ (reduce + perf) (count perf)))]]))
 
 (defn results []
   [:div.container
@@ -191,10 +224,8 @@
    [:div.row
     [:h2 "THE RESULTS PAGE"]
     [:div.well
-     [bar-for-chart {:percentage 10 :velocity 45} "This Awesome API bar"]
-     [bar-for-chart {:percentage 20 :velocity 68} "This also an bar"]
-     [bar-for-chart {:percentage 50 :velocity 180} "This is now a bar"]]
-    ]])
+     (doall (for [test1 (:testing @test-info)]
+              ^{:key (first test1)} [bar-for-chart (first test1)]))]]])
 
 (def pages
   {:home #'home-page
