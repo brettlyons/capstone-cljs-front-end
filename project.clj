@@ -60,9 +60,10 @@
    ;;  :style "nested"
    ;;  :import-path "resources/scss"} 
   
-   ;; :sass {:src "resources/sass/stylesheets" :dst "resources/public/css"} 
+;;   :sass {:src "resources/sass/stylesheets" :dst "resources/public/css"} 
   
-  :hooks ;; [leiningen.sassc]
+  ;; :hooks [leiningen.sassc]
+  :hooks []
   :clean-targets ^{:protect false} [:target-path [:cljsbuild :builds :app :compiler :output-dir] [:cljsbuild :builds :app :compiler :output-to]]
   :cljsbuild
   {:builds
