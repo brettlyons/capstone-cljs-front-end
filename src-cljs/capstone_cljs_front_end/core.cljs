@@ -94,7 +94,11 @@
                     :handler (fn [res]
                                (println (str "response " res " and the Time to respond was: " (- (.now js/Date) start))
                                         (push-to-results id (- (.now js/Date) start))
-                                        (get-testing-results id)))
+                                        (get-testing-results id)
+                                        ;; (if (< (count (get-testing-results id)) 100)
+                                        ;;   (make-ajax-call id)
+                                        ;;   nil)
+                                        ))
                 :error-handler (fn [err]
                                  (println (str "response " err " and the Time to respond was: " (- (.now js/Date) start)))
                                  (println (str "get err handler " err)))})
@@ -182,8 +186,8 @@
 
 (defn home-page []
   [:div.container
-   [:div.row
-    [:h2 {:style {:background-color "tomato"}} (str "DEVINFO: " @test-info " counter: " @counter)]]
+   ;; [:div.row
+   ;;  [:h2 {:style {:background-color "tomato"}} (str "DEVINFO: " @test-info " counter: " @counter)]]
    [:div.row
     [:div.col-md-2
      [:h3.capsule.capsule-bar  "API's"]
@@ -201,10 +205,11 @@
    [:p]
    [:div.row
     [:div.col-md-12
-     [:button.btn.btn-lg.btn-danger.pull-right {:on-click (fn [e]
-                                                            (doall (for [test (:testing @test-info)]
-                                                                     (let [testId (first test)]
-                                                                       (make-ajax-call testId)))))} "Run the Test" ]]]])
+     [:a {:href "#/results"}
+      [:button.btn.btn-lg.btn-danger.pull-right {:on-click (fn [e]
+                                                             (doall (for [test (:testing @test-info)]
+                                                                      (let [testId (first test)]
+                                                                        (make-ajax-call testId)))))} "Run the Test" ]]]]])
 
 (defn bar-for-chart [id]
   (let [perf (get-testing-results id) label (get-testing-name id)]
@@ -214,7 +219,7 @@
       [:div.progress-bar.progress-bar-striped.active {:style
                                                       {
                                                        ;; :height (str "10%")
-                                                       :width (str (:percentage perf) "%")
+                                                       :width (str (/ (reduce + perf) (count perf)) "%")
                                                        ;; :background-color "grey"
                                                        }}] (str "Avg. Time For Response in ms: " (/ (reduce + perf) (count perf)))]]))
 

@@ -54,16 +54,16 @@
             [lein-cljsbuild "1.1.1"]
             [lein-sassy "1.0.7"]
             [lein-sassc "0.10.4"]]
-   ;; :sassc
-   ;; {:src "resources/scss/screen.scss"
-   ;;  :output-to "resources/public/css/screen.css"
-   ;;  :style "nested"
-   ;;  :import-path "resources/scss"} 
+   :sassc
+   {:src "resources/scss/screen.scss"
+    :output-to "resources/public/css/screen.css"
+    :style "nested"
+    :import-path "resources/scss"} 
   
-;;   :sass {:src "resources/sass/stylesheets" :dst "resources/public/css"} 
+  :sass {:src "resources/sass/stylesheets" :dst "resources/public/css"} 
   
-  ;; :hooks [leiningen.sassc]
-  :hooks []
+  :hooks [leiningen.sassc]
+  ;; :hooks []
   :clean-targets ^{:protect false} [:target-path [:cljsbuild :builds :app :compiler :output-dir] [:cljsbuild :builds :app :compiler :output-to]]
   :cljsbuild
   {:builds
