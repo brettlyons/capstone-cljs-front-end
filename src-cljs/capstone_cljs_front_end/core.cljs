@@ -70,13 +70,32 @@
 (defn get-testing-results [id]
   (get-in @test-info [:testing id :results]))
 
+(defn get-testing-errors [id]
+  (get-in @test-info [:testing id :errors]))
+
 (defn push-to-results [id result]
   (swap! test-info update-in [:testing id :results] conj result)
   (println (get-testing-results id)))
 
+(defn push-to-errors [id err]
+  (swap! test-info update-in [:testing id :errors] conj err)
+  (println (get-testing-errors id)))
+
+(defn clear-all-results []
+  (println "ETC")
+  (for [test (:testing @test-info)]
+    (let [testId (first test)]
+         (swap! test-info update-in [:testing testId :results] vec [])))
+  (println "TESTING: "(get-in @test-info [:testing 1 :results])))
+
+(defn clear-all-errors []
+  (for [test (:testing @test-info)]
+    (swap! test-info update-in [:testing (first test) :errors] vec []))
+  (println "CLEAR ALL ERRORS TESTING" (get-in @test-info [:testing])))
+  
 (defn set-editing! [& test-id]
   (swap! test-info assoc :editing
-         (get (:testing @test-info) (first test-id) {:address "http://" :name nil :payload nil :method  "GET" :results []}))
+         (get (:testing @test-info) (first test-id) {:address "http://" :name nil :payload nil :method  "GET" :results [] :errors []}))
   (del-api-test (first test-id)))
 
 (defn add-api-test! []
@@ -87,25 +106,40 @@
 (defonce init (do
                 (set-editing!)))
 
-(defn make-ajax-call [id]
+(defn make-ajax-call [id & n-calls]
   (let [address (get-testing-addr id) method (get-testing-method id) payload (get-testing-payload id) start (.now js/Date)]
+    ;; (println (str "N CALLS: " @n-calls))
     (if (= method "GET")
       (ajax/GET address {:timeout 60
-                    :handler (fn [res]
-                               (println (str "response " res " and the Time to respond was: " (- (.now js/Date) start))
-                                        (push-to-results id (- (.now js/Date) start))
-                                        (get-testing-results id)
-                                        ;; (if (< (count (get-testing-results id)) 100)
-                                        ;;   (make-ajax-call id)
-                                        ;;   nil)
-                                        ))
-                :error-handler (fn [err]
-                                 (println (str "response " err " and the Time to respond was: " (- (.now js/Date) start)))
-                                 (println (str "get err handler " err)))})
-      (ajax/POST address {;; :params (clj->js ){:thingie "stuffjkdlajklajkla"}
-                          :body payload
-                          :handler (fn [res] (println "post handler" res (str "js->clj THE MAP: " payload)))
-                          :error-handler (fn [err] (println "post err handler " err payload))}))))
+                         :handler (fn [res]
+                                    (println (str "response " res " and the Time to respond was: " (- (.now js/Date) start))
+                                             (push-to-results id (- (.now js/Date) start))
+                                             (get-testing-results id))
+                                    (if (< (+ (count (get-testing-errors id)) (count (get-testing-results id))) 1000)
+                                      (make-ajax-call id)
+                                      nil))
+                :error-handler (fn [res]
+                                    (println (str "ERROR response" res " and the Time to respond was: " (- (.now js/Date) start))
+                                             (push-to-errors id (- (.now js/Date) start))
+                                             (get-testing-errors id))
+                                    (if (< (+ (count (get-testing-errors id)) (count (get-testing-results id))) 1000)
+                                      (make-ajax-call id)
+                                      nil))})
+      (ajax/POST address {:body payload
+                          :handler (fn [res]
+                                    (println (str "response " res " and the Time to respond was: " (- (.now js/Date) start))
+                                             (push-to-results id (- (.now js/Date) start))
+                                             (get-testing-results id))
+                                    (if (< (+ (count (get-testing-errors id)) (count (get-testing-results id))) 1000)
+                                      (make-ajax-call id)
+                                      nil))
+                          :error-handler (fn [res]
+                                    (println (str "ERROR response " res " and the Time to respond was: " (- (.now js/Date) start))
+                                             (push-to-errors id (- (.now js/Date) start))
+                                             (get-testing-errors id))
+                                    (if (< (+ (count (get-testing-errors id)) (count (get-testing-results id))) 1000)
+                                      (make-ajax-call id)
+                                      nil))}))))
 
 (defn edit-btns []
   [:div.col-md-8
@@ -185,43 +219,55 @@
      [rm-test-btn id]]]])
 
 (defn home-page []
-  [:div.container
-   ;; [:div.row
-   ;;  [:h2 {:style {:background-color "tomato"}} (str "DEVINFO: " @test-info " counter: " @counter)]]
-   [:div.row
-    [:div.col-md-2
-     [:h3.capsule.capsule-bar  "API's"]
-     (doall (for [test1 (:testing @test-info)]
-              ^{:key (first test1)} [name-capsule (first test1)]))]
-    [:div.col-md-10
-     [:h3.capsule.capsule-bar "Edit API Info"]
-     [api-form]
-     [:div.row
-      [:p]
-      [edit-btns]]]]
-   [:p]
-   [:div.row
-    [:div.col-md-12.capsule.capsule-bar]]
-   [:p]
-   [:div.row
-    [:div.col-md-12
-     [:a {:href "#/results"}
-      [:button.btn.btn-lg.btn-danger.pull-right {:on-click (fn [e]
-                                                             (doall (for [test (:testing @test-info)]
-                                                                      (let [testId (first test)]
-                                                                        (make-ajax-call testId)))))} "Run the Test" ]]]]])
+  ;;(let [n-calls (reagent/atom false)]
+    (fn [] 
+      [:div.container
+       ;; [:div.row
+       ;;  [:h2 {:style {:background-color "tomato"}} (str "DEVINFO: " @test-info " counter: " @counter)]]
+       [:div.row
+        [:div.col-md-2
+         [:h3.capsule.capsule-bar  "API's"]
+         (doall (for [test1 (:testing @test-info)]
+                  ^{:key (first test1)} [name-capsule (first test1)]))]
+        [:div.col-md-10
+         [:h3.capsule.capsule-bar "Edit API Info"]
+         [api-form]
+         [:div.row
+          [:p]
+          [edit-btns]]]]
+       [:p]
+       [:div.row
+        [:div.col-md-12.capsule.capsule-bar]]
+       [:p]
+       [:div.row
+        ;; [:div.col-md-10
+        ;;  [:div.input-group.pull-right
+        ;;   [:span.input-group-addon "Number of Requests: "]
+        ;;   [:input.form-control {:type "number"
+        ;;                         :value @n-calls
+        ;;                         :on-change #(reset! n-calls (-> % .-target .-value))}]]]
+         [:a {:href "#/results"}
+          [:button.btn.btn-lg.btn-danger.pull-right {:on-click (fn [e]
+                                                                 (doall (for [test (:testing @test-info)]
+                                                                          (let [testId (first test)]
+                                                                            (make-ajax-call testId)))))} "Run the Test" ]]]]))
 
 (defn bar-for-chart [id]
-  (let [perf (get-testing-results id) label (get-testing-name id)]
+  (let [perf (get-testing-results id) label (get-testing-name id) errors (get-testing-errors id)]
     [:div.row
      [:p label]
      [:div.progress
       [:div.progress-bar.progress-bar-striped.active {:style
                                                       {
                                                        ;; :height (str "10%")
-                                                       :width (str (/ (reduce + perf) (count perf)) "%")
+                                                       :width (str (/ (count perf) 10) "%")
                                                        ;; :background-color "grey"
-                                                       }}] (str "Avg. Time For Response in ms: " (/ (reduce + perf) (count perf)))]]))
+                                                       }}] 
+      [:div.progress-bar.progress-bar-striped.progress-bar-warning {:style
+                                                                    {:width (str (/ (count errors) 10) "%")}}]
+      ]
+     [:p (str "Avg. Time For Response in ms: " (/ (reduce + perf) (count perf)))]
+     [:p {:style {:color "red"}}"ERRORS: " (count errors)]]))
 
 (defn results []
   [:div.container
@@ -230,7 +276,10 @@
     [:h2 "THE RESULTS PAGE"]
     [:div.well
      (doall (for [test1 (:testing @test-info)]
-              ^{:key (first test1)} [bar-for-chart (first test1)]))]]])
+              ^{:key (first test1)} [bar-for-chart (first test1)]))]]
+   [:div.row
+    [:div.col-md-12
+     [:button.btn.btn-lg.btn-info.pull-right {:on-click (fn [e] )} "Clear Results"]]]])
 
 (def pages
   {:home #'home-page
